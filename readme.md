@@ -47,7 +47,7 @@ var resp = new Response('[{"a": 1}, {"a": 2}]')
 resp.json().then(x => console.log('response = ', x))
 ```
 
-We can even create fake responses returning binary files (images here): (borrowed from [SO 12168909](http://stackoverflow.com/questions/12168909/blob-from-dataurl))
+We can even create fake responses returning binary files: (borrowed from [SO 12168909](http://stackoverflow.com/questions/12168909/blob-from-dataurl))
 
 ```javascript
 function dataURItoBlob(dataURI) {
@@ -68,9 +68,9 @@ res.blob().then(x => {
   img.src = URL.createObjectURL(x);
   document.body.appendChild(img);
 });
+```
 
 ## Cache Storage
-```
 
 Cache Storage provides a mechanism for caching reqeust / responses.
 
@@ -102,38 +102,6 @@ setTimeout(() =>
    .then(console.log)
 , 100);
 
-```
-
-[Flow type decleration of cache storage](https://flowtype.org/try/#0PQKgBAAgZgNg9gdzCYAoAJgUwMYwIYBOmYueAzmWAMJ7YAWmA8gA4AuAlnAHaUDeqYMOwDmXOEQDKmQvQD8ALjAAjOHBgBuAUNHjMAWUys6cdAuWqNWkWKIA1QgE8zKtZsHZaDAHJ4AtpmcLTQBfVAwcfCIhLlZMAihaYhp6Yn5BXzxWegAKIgBHAFdMMlZFACVMQuLWMAAfMBKCdi5hABowODZOHlkwRWSGFg5uMgBKRQAFAjhfdjJMAB4KsmYRzAA+NzAMrLoAQRgYXMqikvKT6rqwCVYmlvbO4Z6+6k8mLpHxsCmZucWAbQqVRKAF1NlpmAVWMdgaUwEDTjV6o1msIvj9ZvMlsVVjwNls8Oh0NkCgQYIoUS10dNMYsAG5wdjocGCQnoA5HUkwMiKQEXEpXSnCEHU35YhlMllgLAwQyYGGI86wwW3VEPD7PfpvIbdMaTGl-BYuGBSgDWmAcZGyotpCz5sLBITCWFIUWasXiiVeKT4Wh2OXyivh-KR11V9w6GrIvS1KR1n31YsWy1x8ylnUwXGyHhSPn8FPDaMTtoG+K05st1uLhv+QsdWhlcuyFYLdyL3wNWONUro5GbFtbqJthu7TsE4VdxDphBIbx53oYZCAA)
-```flowtype
-/* @flow */
-
-declare class CacheOptions {
-  ignoreSearch?: bool;
-  ignoreMethod?: bool;
-  ignoreVary?: bool;
-  cacheName?: bool;
-}
-
-declare interface Cache {
-  match(request: Request | string, options? : CacheOptions): Promise<Response>;
-  matchAll(request: Request | String, options? : CacheOptions): Promise<[Request]>;
-  put(request: Request | string): Promise<Response>;
-  add(url: string): Promise<void>;
-  addAll(urls: [Request | string]): Promise<void>;
-  delete(request: Request | string, options? : CacheOptions): Promise<bool>;
-  keys(): Promise<[Request]>;
-}
-
-declare interface Caches {
-  match(request: Request | String, options? : CacheOptions): Promise<Response>;
-  open(cacheName: string): Promise<Cache>;
-  keys(): Promise<[string]>;
-  delete(key: string): Promise<bool>;
-  has(key: string): Promise<bool>;
-}
-  
-declare var caches: Caches
 ```
 
 Here we created a fake API that returns the current time. `myFetch()` function returns our fake Response if the URL matches `some-fake-url` otherwise fallbacks to the standard `fetch()`.
@@ -187,6 +155,40 @@ caches.open('my-cache').then(cache =>
 
 They're most useful when we want to ensure that some resources are always cached and are available offline.
 
+### Flow type decleration for Cache Storage
+
+[Flow type decleration for cache storage](https://flowtype.org/try/#0PQKgBAAgZgNg9gdzCYAoAJgUwMYwIYBOmYueAzmWAMJ7YAWmA8gA4AuAlnAHaUDeqYMOwDmXOEQDKmQvQBcYAPwAjOHBgBuAUNHjMAWUys6cdPOWqNWkWKIA1QgE8zKtZsHZaDAHJ4AtpmcLTQBfVAwcfCIhLlZMAihaYhp6Yn5BXzxWegAKIgBHAFdMMlZ5ACVMQuLWMAAfMBKCdi5hABowODZOHgV5ZIYWDm4yAEp5AAUCOF92MkwAHgqyZmHMAD43MAysugBBGBhcyqKS8uPqurAJViaW9s6hnr7PJi7hsbBJ6dmFgG0KqolAC6Gy0zAKrCOgNKYABJxq9UazWEHy+Mzmi2KKx4602eHQ6GyBQIMHkSJaqKm6IWADc4Ox0KDBPj0PtDsSYGR5P9ziVLuThEDKd8MXSGUywFgYIZMFD4Wdofybsj7m8ntQXoNuqMJlSfvMXDAJQBrTAOMjZYXU+Y86EgkJhLCkKLNWLxRIalJ8LTbHL5eWw3kIq7Ku4dNVkXqegYRq36pbYuYSzqYLjZDwpHz+MmhlG6kULfq4rSm82W-PW34C+1aKUy7KlnO3POfPUYw0SujkBtmpvIuPtiyg0KCcLO4g0wgkF5c6PFIA)
+```flowtype
+/* @flow */
+
+declare class CacheOptions {
+  ignoreSearch: ?bool;
+  ignoreMethod: ?bool;
+  ignoreVary: ?bool;
+  cacheName: ?bool;
+}
+
+declare interface Cache {
+  match(request: Request | string, options?: CacheOptions): Promise<Response>;
+  matchAll(request: Request | String, options?: CacheOptions): Promise<[Request]>;
+  put(request: Request | string): Promise<Response>;
+  add(url: string): Promise<void>;
+  addAll(urls: [Request | string]): Promise<void>;
+  delete(request: Request | string, options?: CacheOptions): Promise<bool>;
+  keys(): Promise<[Request]>;
+}
+
+declare interface Caches {
+  match(request: Request | String, options?: CacheOptions): Promise<Response>;
+  open(cacheName: string): Promise<Cache>;
+  keys(): Promise<[string]>;
+  delete(key: string): Promise<bool>;
+  has(key: string): Promise<bool>;
+}
+  
+declare var caches: Caches
+```
+
 ## Service Workers
 
 By now we're able to cache any fetch request / response. Service Workers allow us to hijack any (GET) requests from our web app and potentially respond with a cached (or even a completely fake) response.
@@ -200,27 +202,65 @@ self.addEventListener('fetch', event => event.respondWith(
 
 There are many security concerns and other.
 
-[01-service-worker-caches-all-gets](./01-service-worker-caches-all-gets) a service worker that blindly caches every GET requests.
+**[01-service-worker-caches-all-gets.js](./01-service-worker-caches-all-gets)** a service worker that blindly caches every GET requests.
+
+The problem with the above snippet is that it never updates its cached resources. I prefer a solution that adapts to browser's connectivity status. The next snippet fetches the resource from the network and caches it when the browser is online, otherwise serves the resource from the cache storage:
+
+**[02-service-workers-caches-only-if-online.js](./02-service-workers-caches-only-if-online.js)** a service worker that fallsback to cache if the browser is offline.
 
 
 ## Versioning
+
+There's no way of specifying any expiration date for items cache storage. Once we add a response to cache storage it reamins there and we can only delete it by explicitly calling `cache.delete()` function.
+
+We can have different instances of cache storage in the same app. An instance can be created (or opened) by `cache.open(key: string)` function which returns a Promise that resolves in a cache storage object.
+
+We can get the name of all cache instances by `caches.keys()` function:
 
 ```
 caches.keys().then(keys => console.log(keys))
 ```
 
-### Web Server
+We can use cache instances to cache different versions of the same resource. To completely retire a version, we have to delete it manually:
+
+```
+caches.delete(oldKey)
+```
+
+One common practice is to have a global version (cache key):
+
+```
+const cacheName = 'v1'
+caches.open(cacheName).then(cache => 
+  cache.addAll(['https://api.ipify.org/?v=1', 'https://api.ipify.org/?v=2'])
+)
+```
+
+We can clean up the 'previous' versions by filtering their keys:
+
+```
+caches.keys()
+.then(keys => Promise.all(
+  keys
+  .filter(key => key != cacheName)
+  .map(key => cache.delete(key))
+));
+```
+
+
+## Web Server
+
+Fetch requests for resources that have been cached by the browser (as the result of HTTP cache-control headers), will not reach the service worker; the browser handle these resources directly from its cache (even if we change the cache name / version).
+
 This was a gotcha for me.
 
-Fetch requests for resources that have been already cached by the browser (as the result of HTTP cache-control headers), will not reach the service worker; the browser handle these resources directly from its cache (even if you change the cache name).
-
-Make sure that your server responds with correct cache disabling headers, while testing caching in a service worker:
+Make sure that your server responds with correct cache disabling headers, while testing caching in a service worker. Your server should respond with:
 
 ```
 cache-control: max-age=-1
 ```
 
-For example this is how you can disable caching in node's [http-server](https://github.com/indexzero/http-server).
+For example this is how you can disable browser HTTP caching in Node's [http-server](https://github.com/indexzero/http-server).
 
 ```
 http-server . -c-1
@@ -244,7 +284,8 @@ var cacheARequest = (cacheName, request) => caches.open(cacheName).then(
   )
 
 var cacheAResponse = (cache, request, response) => {
-  cache.put(request, response.clone()); // we don't have to wait for put to finish
+  // we don't have to wait for put to finish
+  cache.put(request, response.clone());
   return response;
 }
 
