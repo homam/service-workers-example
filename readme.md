@@ -276,3 +276,10 @@ For example this is how you we disable browser HTTP caching in Node's [http-serv
 ```
 http-server . -c-1
 ```
+----
+
+Test this repo:
+
+```
+http-server . -c-1
+```

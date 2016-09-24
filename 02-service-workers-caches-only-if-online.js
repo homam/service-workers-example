@@ -2,7 +2,7 @@
 // its response, cacheName is not really used in this service worker.
 // Changing the cacheName will cause other (previous) caches to be deleted
 // (check activate event handler).
-const cacheName = 'v1'
+const cacheName = 'v3'
 
 // utlity 
 const trace = (x, y) => {
@@ -10,14 +10,14 @@ const trace = (x, y) => {
   return y;
 }
 
-
 const urlsToCache = new Set([
+  '/',
   self.location.href
 ].map(u => new URL(u, self.location.href).href))
 
 
 self.addEventListener('install', event => {
-  console.log('% install')
+  console.log('% install', urlsToCache)
   caches.open(cacheName).then(cache =>
     cache.addAll(Array.from(urlsToCache))
   )
