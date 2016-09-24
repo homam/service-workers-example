@@ -1,20 +1,19 @@
-**This is a work in progress**
-----
-
 # Making almost every Web page work offline
 
 I hope this post clarifies some tricks and techniques in Cache Storage and Service Worker APIs.
 
 Most of the code snippets of this post can be run in Chrome console while reading this blog at Medium.
 
-## fetch :: Request -> Promise Response
+## function fetch (req : Request) : Promise<Response>
+
+[Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API) provides a rich interface for creating request / responses in browser-side JavaScript:
 
 ```javascript
 var req = new Request('https://api.ipify.org');
 fetch(req).then(res => res.text()).then(console.log);
 ```
 
-We can add custom headers to this request, but browsers might override our headers. For example Chrome always overrides `User-Agent` and `Referer`. Extensions like [ModHeader](https://chrome.google.com/webstore/detail/modheader/idgpnmonknjnojddfkpgkljpfnnfcklj) may also add or override our headers *only when the browser is online*.
+We can add custom headers to this request, but note that the browser might override our headers. For example Chrome always overrides `User-Agent` and `Referer`. Extensions like [ModHeader](https://chrome.google.com/webstore/detail/modheader/idgpnmonknjnojddfkpgkljpfnnfcklj) may also add or override our headers *only when the browser is online*.
 
 ```javascript
 var headers = new Headers({
@@ -27,11 +26,11 @@ fetch(req).then(res => res.text()).then(console.log);
 We can easliy make POST, HEAD or DELETE requests:
 
 ```javascript
-var req = new Request('some-url', {method: 'POST', body: '{"foo":"bar"}'})
+var req = new Request('some-url', {method: 'POST', body: '{"foo": "bar"}'})
 fetch(req)
 ```
 
-The result of `fetch()` is a Promise of type `Response`.`Response` also has a rich API. Let's fake a text response to try it:
+The result of `fetch()` is a Promise of type `Response`.`Response` also has a flexible API. Let's give it a try by faking a text response:
 
 ```javascript
 var res = new Response('hello')
@@ -56,7 +55,7 @@ function dataURItoBlob(dataURI) {
   const ab = new ArrayBuffer(byteString.length);
   const ia = new Uint8Array(ab);
   for (var i = 0; i < byteString.length; i++) {
-      ia[i] = byteString.charCodeAt(i);
+    ia[i] = byteString.charCodeAt(i);
   }
   const blob = new Blob([ab], {type: mimeString});
   return blob;
@@ -72,7 +71,7 @@ res.blob().then(x => {
 
 ## Cache Storage
 
-Cache Storage provides a mechanism for caching reqeust / responses.
+Cache Storage provides a mechanism for caching request / responses.
 
 Let's play with our new toys Cache, Request and Response:
 
@@ -104,16 +103,18 @@ setTimeout(() =>
 
 ```
 
-Here we created a fake API that returns the current time. `myFetch()` function returns our fake Response if the URL matches `some-fake-url` otherwise fallbacks to the standard `fetch()`.
+You can copy and paste this snippet in Chrome / Firefox console on this page.
+
+Here we created a fake API that returns the current time. `myFetch()` function returns our fake Response if the URL matches `some-fake-url` otherwise falls back to the standard `fetch()`. (`caches.open()` function is explained in the versioning section below.)
 
 
 The simplified signature of the standard `fetch()` function is more or less like:
 
-```haskell
-fetch :: Request -> Promise Response
+```flowtype
+declare function fetch (req : Request) : Promise<Response>
 ```
 
-`fetch()` takes a `Request` as its only argument and returns a `Promise` that will resolve to a `Response` object. We can easily create a `cachedFetch` function with a similar interface which first tries to retrieve the request from the cache first, but will fallback to the standard `fetch` if the item was not found in the cache.
+`fetch()` takes a `Request` as its only argument and returns a `Promise` that resolves in a `Response` object. We can easily create a `cachedFetch` function with a similar signature which tries to retrieve the response from the cache first, but will fallback to the standard `fetch()` if the item was not found in the cache.
 
 ```javascript
 const cachedFetch = request => request.method != 'GET' ? 
@@ -122,10 +123,10 @@ const cachedFetch = request => request.method != 'GET' ?
   caches.open('my-cache').then(cache =>
     cache.match(request).then(resp => {
       if(!!resp) {
-        console.log('> from cache', request.url)
+        console.log('from cache', request.url)
         return resp;
       } else {
-        console.log('! not in cache', request.url)
+        console.log('!not in cache', request.url)
         return fetch(request).then(response => {
           // put the new response in the cache for next fetches
           cache.put(request, response.clone());
@@ -153,11 +154,11 @@ caches.open('my-cache').then(cache =>
 )
 ```
 
-They're most useful when we want to ensure that some resources are always cached and are available offline.
+These functions are most useful when we want to ensure that some resources are always cached and are available offline.
 
-### Flow type decleration for Cache Storage
+### Flow type declaration for Cache Storage
 
-[Flow type decleration for cache storage](https://flowtype.org/try/#0PQKgBAAgZgNg9gdzCYAoAJgUwMYwIYBOmYueAzmWAMJ7YAWmA8gA4AuAlnAHaUDeqYMOwDmXOEQDKmQvQBcYAPwAjOHBgBuAUNHjMAWUys6cdPOWqNWkWKIA1QgE8zKtZsHZaDAHJ4AtpmcLTQBfVAwcfCIhLlZMAihaYhp6Yn5BXzxWegAKIgBHAFdMMlZ5ACVMQuLWMAAfMBKCdi5hABowODZOHgV5ZIYWDm4yAEp5AAUCOF92MkwAHgqyZmHMAD43MAysugBBGBhcyqKS8uPqurAJViaW9s6hnr7PJi7hsbBJ6dmFgG0KqolAC6Gy0zAKrCOgNKYABJxq9UazWEHy+Mzmi2KKx4602eHQ6GyBQIMHkSJaqKm6IWADc4Ox0KDBPj0PtDsSYGR5P9ziVLuThEDKd8MXSGUywFgYIZMFD4Wdofybsj7m8ntQXoNuqMJlSfvMXDAJQBrTAOMjZYXU+Y86EgkJhLCkKLNWLxRIalJ8LTbHL5eWw3kIq7Ku4dNVkXqegYRq36pbYuYSzqYLjZDwpHz+MmhlG6kULfq4rSm82W-PW34C+1aKUy7KlnO3POfPUYw0SujkBtmpvIuPtiyg0KCcLO4g0wgkF5c6PFIA)
+[Flow type declaration for cache storage](https://flowtype.org/try/#0PQKgBAAgZgNg9gdzCYAoVATApgYxgQwCcsw98BncsAYXxwAssB5ABwBcBLOAOyoG9UYMBwDm3OMQDKWIgwBcYAPwAjOHBgBuQcLESsAWSxt6cDApVrN20eOIA1IgE9zq9VqE46jAHL4AtlgulloAvujYZMTC3GxYhFB0JLQMJAJC+BgYABQAroQwCuRshBzcIgCUCgAKhHB+HORYADwAbnAcGAB87mAZGACCMDC5+eQKANoASlgAjjlYRWAAPmBFJWUAupVgNXUNzW0d3drYMEZYWcRzC2wK09eLK2ulIgA0YHDsXLyKCsmMrE4PHI2129UaTVcMGOQgA1lhHOQsqDauDmlNZvMihsYWA-Pg2AxLpibncSY9VsUXu9PkCfn8vMwvsCUXsIdNyCxgVhcfjCfRBsMrljbmB7iLlmBJFSyjTmfSaIzAd8QdVUfsmhiHmwcT0WDk2MTtWTtZLnmVWWjWu0uqFwrgCFFSrF4olFSl+CcsGdYll4c5KesKmq2c0obj6BQ-QjCjLgzt1RDwz1-UjLRrxuaRLrtHyicLSWLyWxJdKg3K6eRfu6AfLVQnQ00OVzeDyep8sNwsp4Ur4ArGg+mIf826gwkJMA6iCQWkRSIyxjWFkA)
 ```flowtype
 /* @flow */
 
@@ -169,21 +170,21 @@ declare class CacheOptions {
 }
 
 declare interface Cache {
-  match(request: Request | string, options?: CacheOptions): Promise<Response>;
-  matchAll(request: Request | String, options?: CacheOptions): Promise<[Request]>;
-  put(request: Request | string): Promise<Response>;
   add(url: string): Promise<void>;
   addAll(urls: [Request | string]): Promise<void>;
   delete(request: Request | string, options?: CacheOptions): Promise<bool>;
   keys(): Promise<[Request]>;
+  match(request: Request | string, options?: CacheOptions): Promise<Response>;
+  matchAll(request: Request | String, options?: CacheOptions): Promise<[Request]>;
+  put(request: Request | string): Promise<void>;
 }
 
 declare interface Caches {
-  match(request: Request | String, options?: CacheOptions): Promise<Response>;
-  open(cacheName: string): Promise<Cache>;
-  keys(): Promise<[string]>;
   delete(key: string): Promise<bool>;
   has(key: string): Promise<bool>;
+  keys(): Promise<[string]>;
+  match(request: Request | String, options?: CacheOptions): Promise<Response>;
+  open(cacheName: string): Promise<Cache>;
 }
   
 declare var caches: Caches
@@ -191,7 +192,9 @@ declare var caches: Caches
 
 ## Service Workers
 
-By now we're able to cache any fetch request / response. Service Workers allow us to hijack any (GET) requests from our web app and potentially respond with a cached (or even a completely fake) response.
+By now we're able to cache any fetch request / response. Service Workers allow us to hijack any request in our web app and potentially respond with a cached (or even a completely fake) response.
+
+We take advantage of `fetch` event in service workers. If a page is managed by a service worker, this event is triggered every time that the page creates a HTTP request (whether by JavaScript or by a DOM element like `<img src="" />`)
 
 ```
 self.addEventListener('fetch', event => event.respondWith(
@@ -200,38 +203,42 @@ self.addEventListener('fetch', event => event.respondWith(
 )
 ```
 
-There are many security concerns and other.
+There are many security concerns with regard to service workers; apps that utilize service workers have to be served through HTTPS and all 3rd any party resources (including CDN content) must have a compatible CORS settings.
 
-**[01-service-worker-caches-all-gets.js](./01-service-worker-caches-all-gets)** a service worker that blindly caches every GET requests.
+**Here's a service worker that blindly caches every GET requests:**
 
-The problem with the above snippet is that it never updates its cached resources. I prefer a solution that adapts to browser's connectivity status. The next snippet fetches the resource from the network and caches it when the browser is online, otherwise serves the resource from the cache storage:
+[01-service-worker-caches-all-gets.js](./01-service-worker-caches-all-gets.js)
 
-**[02-service-workers-caches-only-if-online.js](./02-service-workers-caches-only-if-online.js)** a service worker that fallsback to cache if the browser is offline.
+The problem with the above snippet is that it never updates its cached resources. I prefer a solution that adapts to browser's connectivity status. The next snippet fetches the resource from the network and caches it when the browser is online, otherwise serves the resource from the cache storage when browser is offline:
+
+**A service worker that falls back to cache if the browser is offline:**
+
+[02-service-workers-caches-only-if-online.js](./02-service-workers-caches-only-if-online.js)
 
 
 ## Versioning
 
-There's no way of specifying any expiration date for items cache storage. Once we add a response to cache storage it reamins there and we can only delete it by explicitly calling `cache.delete()` function.
+There's no way of specifying any expiration date for items in the cache storage. Once a response is cached it remains there and we can only delete it by explicitly calling `cache.delete()` function.
 
 We can have different instances of cache storage in the same app. An instance can be created (or opened) by `cache.open(key: string)` function which returns a Promise that resolves in a cache storage object.
 
-We can get the name of all cache instances by `caches.keys()` function:
+`caches.keys()` function lists the name of all existing cache instances:
 
 ```
 caches.keys().then(keys => console.log(keys))
 ```
 
-We can use cache instances to cache different versions of the same resource. To completely retire a version, we have to delete it manually:
+We can use cache instances to cache different versions of the same resource. In order to completely retire a version, we have to delete it manually:
 
 ```
-caches.delete(oldKey)
+caches.delete(oldKey: string)
 ```
 
 One common practice is to have a global version (cache key):
 
 ```
-const cacheName = 'v1'
-caches.open(cacheName).then(cache => 
+const currentCacheName = 'v1'
+caches.open(currentCacheName).then(cache => 
   cache.addAll(['https://api.ipify.org/?v=1', 'https://api.ipify.org/?v=2'])
 )
 ```
@@ -242,70 +249,30 @@ We can clean up the 'previous' versions by filtering their keys:
 caches.keys()
 .then(keys => Promise.all(
   keys
-  .filter(key => key != cacheName)
+  .filter(key => key != currentCacheName)
   .map(key => cache.delete(key))
 ));
 ```
 
+Cache instances have use-cases beyond versioning, for example we can categorize resources by caching them in different instances. This gives us more control when it comes to deleting expired resources. In this post we only deal with one cache instance.
 
-## Web Server
+
+## Web Server Considerations
+
+Service workers and the pages that they control must be serviced over a secure connection (HTTPS or localhost).
 
 Fetch requests for resources that have been cached by the browser (as the result of HTTP cache-control headers), will not reach the service worker; the browser handle these resources directly from its cache (even if we change the cache name / version).
 
 This was a gotcha for me.
 
-Make sure that your server responds with correct cache disabling headers, while testing caching in a service worker. Your server should respond with:
+Make sure that your server responds with correct cache-control headers. During the development, while testing caching in a service worker, your server should respond with:
 
 ```
 cache-control: max-age=-1
 ```
 
-For example this is how you can disable browser HTTP caching in Node's [http-server](https://github.com/indexzero/http-server).
+For example this is how you we disable browser HTTP caching in Node's [http-server](https://github.com/indexzero/http-server).
 
 ```
 http-server . -c-1
-```
-
-...
-
-## How to have an offline page?
-
-
-
-
-
-```javascript
-
-var cacheARequest = (cacheName, request) => caches.open(cacheName).then(
-  cache =>
-    fetch(request.clone()).then(response =>
-      cacheAResponse(cache, request, response)
-    )
-  )
-
-var cacheAResponse = (cache, request, response) => {
-  // we don't have to wait for put to finish
-  cache.put(request, response.clone());
-  return response;
-}
-
-var tryServingFromCache = (cacheName, request) => caches.open(cacheName).then(
-  cache =>
-    cache.match(request).then(resp => {
-      if(!!resp) {
-        console.log('> from cache', request.url)
-        return resp;
-      } else {
-        console.log('! not in cache', request.url)
-        return fetch(request).then(response => 
-          cacheAResponse(cache, request, response)
-        )
-      }
-    })
-  )
-
-
-// cacheARequest('duck', new Request('https://api.ipify.org')).then(x => x.text()).then(x => console.log(x))
-
-tryServingFromCache('duck', new Request('https://api.ipify.org')).then(x => x.text()).then(x => console.log(x))
 ```
