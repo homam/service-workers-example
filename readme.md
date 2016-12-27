@@ -1,4 +1,4 @@
-# Making almost every Web page work offline
+# Almost any web page can work offline
 
 I hope this post clarifies some tricks and techniques in Cache Storage and Service Worker APIs.
 
